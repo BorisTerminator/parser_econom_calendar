@@ -1,8 +1,6 @@
 __pycache__
 parser_venv
-DB_ekonom_calndar.db
 *.ipynb
-main.py
 parser_hist_data.py
 parser_main.py
 test.py
