@@ -10,6 +10,12 @@ import os
 simple_pars_weeks = Parser_this_and_next_week()
 cont_hist_data = Parser_content()
 
+import logging
+logging.basicConfig(level=logging.DEBUG, filename='new_parser_logging.log', 
+                    format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d)', 
+                    datefmt='%d/%m/%Y %H:%M:%S',
+                    encoding = 'utf-8', filemode='w')
+
 API_TOKEN = os.getenv("API_TOKEN")
 TG_CH = os.getenv("TG_CH")
 
@@ -32,24 +38,28 @@ if __name__ == "__main__":
         job()#собираем основную информацию
         data_times = Updating.select_time_or_update_db(mod='select_time') # забираем время для обновления новостей
         send_message('Основной апроцесс парсинга завершен. Планавое обновление новостей в процессе.')
-        for time_str in data_times:
-            flag = True
-            send_message(f'Обновление новости в {time_str}')
-            while flag == True:
-                today = datetime.now(pytz.utc)
-                current_time = datetime.strftime(today,"%Y-%m-%d %H:%M")
-                if current_time > time_str:
-                    '''Ждем пока новость появиться на сайте'''
-                    time.sleep(60)
-                    Updating.update_data_html()
-                    send_message(f'Новость обновлена!')
-                    time.sleep(60*4)
-                    Updating.update_data_html()
-                    time.sleep(60*3)
-                    Updating.update_data_html()
-                    flag = False
-                else:
-                    time.sleep(30)
+        try:
+            for time_str in data_times:
+                flag = True
+                send_message(f'Обновление новости в {time_str}')
+                while flag == True:
+                    today = datetime.now(pytz.utc)
+                    current_time = datetime.strftime(today,"%Y-%m-%d %H:%M")
+                    if current_time > time_str:
+                        '''Ждем пока новость появиться на сайте'''
+                        time.sleep(60)
+                        Updating.update_data_html()
+                        send_message(f'Новость обновлена!')
+                        time.sleep(60*4)
+                        Updating.update_data_html()
+                        time.sleep(60*3)
+                        Updating.update_data_html()
+                        flag = False
+                    else:
+                        time.sleep(30)
+        except Exception as e:
+            logging.exception(e)
+            time.sleep(60)
 
         
 

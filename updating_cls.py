@@ -63,19 +63,19 @@ class Updating:
                 Previous = chunk.find('span', class_="previousCell").text.strip()
                 if Previous == '':
                     Previous = "None"
-            except:
+            except AttributeError:
                 Previous = "None"
             try:
                 Consensus = chunk.find_all('td', class_="calendarToggleCell")[-3].text.strip()
                 if Consensus == '':
                     Consensus = "None"
-            except:
+            except AttributeError:
                 Consensus = "None"
             try:
-                Actual = chunk.find('span', class_="eventTdPopover dotted").text.strip()
+                Actual = chunk.find('span', class_="actualCell").text.strip()
                 if Actual == '':
                     Actual = "None"
-            except:
+            except AttributeError:
                 Actual = "None"
             try:    
                 id_news = re.sub(r'\D', '', str(chunk).split('<')[1].split()[2]) # id
