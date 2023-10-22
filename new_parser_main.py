@@ -11,7 +11,7 @@ simple_pars_weeks = Parser_this_and_next_week()
 cont_hist_data = Parser_content()
 
 import logging
-logging.basicConfig(level=logging.DEBUG, filename='new_parser_logging.log', 
+logging.basicConfig(level=logging.WARNING, filename='new_parser_logging.log', 
                     format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d)', 
                     datefmt='%d/%m/%Y %H:%M:%S',
                     encoding = 'utf-8', filemode='w')

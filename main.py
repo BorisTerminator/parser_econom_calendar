@@ -7,6 +7,13 @@ from datetime import datetime, date
 from uvicorn import run
 import pytz
 
+
+import logging
+logging.basicConfig(level=logging.WARNING, filename='main.log', 
+                    format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d)', 
+                    datefmt='%d/%m/%Y %H:%M:%S',
+                    encoding = 'utf-8', filemode='w')
+
 def get_time():
     # Получаем текущую дату и время в UTC
     now = datetime.now(pytz.utc)
