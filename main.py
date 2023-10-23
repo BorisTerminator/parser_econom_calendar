@@ -6,111 +6,74 @@ import sqlite3
 from datetime import datetime, date
 from uvicorn import run
 import pytz
-
-
 import logging
 logging.basicConfig(level=logging.WARNING, filename='main.log', 
                     format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d)', 
                     datefmt='%d/%m/%Y %H:%M:%S',
                     encoding = 'utf-8', filemode='w')
-
-def get_time():
-    # Получаем текущую дату и время в UTC
-    now = datetime.now(pytz.utc)
-
-    # Определяем день недели, где понедельник - 0, воскресенье - 6
-    weekday = now.weekday()
-
-    # Определяем начало недели в UTC
-    start_of_week = now - timedelta(days=weekday)
-
-    # Определяем конец недели в UTC
-    end_of_week = start_of_week + timedelta(days=7)
-
-    # Отформатируем дату и время
-    start_of_week_formatted = start_of_week.strftime("%d.%m.%Y")
-    end_of_week_formatted = end_of_week.strftime("%d.%m.%Y")
-    return (start_of_week_formatted,end_of_week_formatted)
-
 ua = UserAgent()
 app = FastAPI()
 
+def add_1_day(date_string):
+    # Разделение строки на год, месяц и день
+    year, month, day = date_string.split("-")
 
-def select_news(start_of_week_formatted,end_of_week_formatted):
+    # Преобразование значений в числовой формат
+    year = int(year)
+    month = int(month)
+    day = int(day)
+
+    # Создание даты из полученных значений
+    date = datetime(year, month, day)
+
+    # Прибавление одного дня
+    new_date = date + timedelta(days=1)
+
+    # Преобразование даты обратно в строку в формате "YYYY-MM-DD"
+    new_date_string = new_date.strftime("%Y-%m-%d")
+    return new_date_string
+   
+
+def select_news(start_of_week_formatted = None,end_of_week_formatted = None, id_list = None, mod = 0):
     conn = sqlite3.connect('DB_ekonom_calndar.db')
     cursor = conn.cursor()
-    sql = '''
-            select  * from news
-            where  ?<=Date and Date<?
-            '''
-    cursor.execute(sql,(start_of_week_formatted,end_of_week_formatted))
-    results = cursor.fetchall()
+    if mod == 0:
+        sql = '''
+                select  * from news
+                where  ?<=Date and Date<?
+                '''
+        cursor.execute(sql,(start_of_week_formatted,end_of_week_formatted))
+        rows = cursor.fetchall()
+    else:
+        placeholders = ','.join('?' for _ in id_list)
+        sql = f'''
+                SELECT * FROM news
+                WHERE id_news IN ({placeholders})
+                '''
+        cursor.execute(sql,id_list)
+        rows = cursor.fetchall()
     conn.commit()
     conn.close()
-    return (results)
-
-def sql_select(time):
-    # Установите соединение с базой данных SQLite
-    conn = sqlite3.connect('DB_ekonom_calndar.db')
-    cursor = conn.cursor()
-
-    # # Получите текущую дату и время
-    # now = datetime.now()
-
-    # Выполните запрос к базе данных
-    cursor.execute("SELECT * FROM news WHERE Date LIKE ?", (time.strftime('%Y-%m-%d') + '%',))
-
-    # Получите все строки, соответствующие запросу
-    rows = cursor.fetchall()
-
     # Получите имена столбцов
     names = [description[0] for description in cursor.description]
-
     # Преобразуйте список списков в список словарей
-    result = [dict(zip(names, row)) for row in rows]
-    conn.close()
-    return result
+    results = [dict(zip(names, row)) for row in rows]
+    return (results)
 
-@app.get('/parser_1/get_data/today')
-def get_data_today():
-    now = datetime.now()
-    return sql_select(now)
-    
-@app.get('/parser_1/get_data/tommorow')
-def get_data_tommorow():
-    today = datetime.now()
-    tomorrow = today + timedelta(days=1)
-    return sql_select(tomorrow)
-
-@app.get('/parser_1/get_data/this_week')
-def get_data_this_week():
-    monday,sunday = get_time()
-    return (select_news(monday,sunday))
-    
-# Произвольный периуд
-@app.get('/parser_1/get_data/arbitrary_time/{start_day}/{finish_day}')
+# Произвольный периуд           YYYY-MM-DD
+@app.get('/econom_calendar/api/{start_day}/{finish_day}')
 def get_data_arbitrary_time(start_day:str,finish_day:str):
-    # start_day,finish_day = datetime.strftime("%d.%m.%Y"),datetime.strftime("%d.%m.%Y")
-    return select_news(start_day,finish_day)
+    finish_day = add_1_day(finish_day)
+    return (select_news(start_day,finish_day))
 
-@app.get('/parser_1/get_data/find_by_id/{id_list}')
+# Ищет по id 
+@app.get('/econom_calendar/find_by_id/api/{id_list}')
 def get_data_find_by_id(id_list:str):
     id_list = json.loads(id_list)
-    conn = sqlite3.connect('DB_ekonom_calndar.db')
-    cursor = conn.cursor()
-    placeholders = ','.join('?' for _ in id_list)
-    sql = f'''
-            SELECT * FROM news
-            WHERE id_news IN ({placeholders})
-            '''
-    cursor.execute(sql,id_list)
-    results = cursor.fetchall()
-    conn.commit()
-    conn.close()
+    results = select_news(id_list=id_list, mod=1)
     return (results)
-    
 
 
 if __name__ == "__main__":
-    run(app="main:app", reload=True, host="192.168.1.9", port=8080)
-    #run(app="main:app", reload=True, host="localhost", port=80)
+    # run(app="main:app", reload=True, host="192.168.1.9", port=8080)
+    run(app="main:app", reload=True, host="localhost", port=80)

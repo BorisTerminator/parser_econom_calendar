@@ -8,3 +8,5 @@ test2.py
 .env
 .gitignore
 my_logging.log
+main.log
+DB_ekonom_calndar.db
