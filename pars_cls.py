@@ -16,14 +16,22 @@ class insert_to_DB:
         if mod == 'insert_content_and_hist_data': # функция вставляет данные контент и hist data
             sql = '''
                 UPDATE news 
-                SET Content = ?, Historical_data = ?
+                SET Content = ?, Historical_data = ?, News_source = ?, Link_to_the_source = ?
                 WHERE id_news = ?
                 '''
             for row in data: #data - это список список с нужными данными
                 id_ = row[0]
                 hist_dat = json.dumps(row[1])  # преобразование в строку
                 content = row[2]
-                cursor.execute(sql, (content, hist_dat, id_))
+                try:
+                    News_source = row[3]
+                except:
+                    News_source = 'None'
+                try:
+                    Link_to_the_source = row[4]
+                except:
+                    Link_to_the_source = 'None'
+                cursor.execute(sql, (content, hist_dat, News_source, Link_to_the_source, id_))
         if mod == 'insert_simple_data': # вставляет просто данные собранные во время работы обычного парсинга
             for row in data:
                 id_to_check = row[8]
@@ -33,14 +41,14 @@ class insert_to_DB:
                 if result[0] == 0:
                     # Вставка запроса
                     cursor.execute('''INSERT INTO news 
-                                (Date, Country, Symbol, Event, Impact, Previous, Consensus, Actual, id_news, source) 
+                                (Date, Country, Symbol, Event, Impact, Previous, Consensus, Actual, id_news, link_to_news) 
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', row)
         #======================================
         conn.commit()
         conn.close()
 
 
-'''Данные класс парсит исторические данные и контент. Возвращает он списко списков вида [id: str,hist_data: list,content: str]'''
+'''Данные класс парсит исторические данные и контент. Возвращает он списко списков вида [id: str,hist_data: list,content: str,  News_source:str, Link_to_the_source: str]'''
 class Parser_content:
     @staticmethod
     async def analiis(html,id_):
@@ -49,9 +57,19 @@ class Parser_content:
             #===============
             try:
                 soup2 = soup.find('div', class_='margin-top-15 margin-bottom-25')
-                content = soup2.text.strip().replace("\n", "")
+                content = (soup2.find('div', class_='display-flex flex-column').find_all('div')[0].text.replace('\n',''))
+                if content == '':
+                    content = soup2.find('a',class_='underline').text
             except:
                 content = 'None'
+            try:
+                News_source = soup2.find('a', class_='underline').text.strip() 
+            except:
+                News_source = 'None'
+            try:
+                Link_to_the_source = soup2.a['href']
+            except:
+                Link_to_the_source = 'None'
             #================
             rows = soup.find_all('tr', class_='eventHistoryRow')
             # Проходимся по каждой строке и извлекаем нужные данные
@@ -84,10 +102,10 @@ class Parser_content:
                                 'Consensus_hist': 'None',
                                 'Actual_hist': 'None' }
                 massive.append(my_dict)
-            return (id_, massive, content)
+            return (id_, massive, content, News_source, Link_to_the_source)
         except Exception as e:
             print('Не получилось получить исторические данные', e)
-            return ([id_,'None','None'])
+            return ([id_,'None','None','None','None'])
         
     @staticmethod   
     async def test(context,url:str,id_:str,semaphore:asyncio.Semaphore):
@@ -227,3 +245,9 @@ class Parser_this_and_next_week:
         return link_and_id
 
 # print(Parser_this_and_next_week.Parser_this_and_next_week_start())
+
+# elements = Parser_this_and_next_week.Parser_this_and_next_week_start()[:90]
+# with open('elements.txt', 'w') as f:
+#     f.write(str(elements))
+
+# # print(Parser_content.start_pars_hist_and_content(elements))

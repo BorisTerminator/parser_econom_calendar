@@ -1,18 +1,23 @@
 from fastapi import FastAPI
 from datetime import datetime, timedelta
-import json
 from fake_useragent import UserAgent
 import sqlite3
 from datetime import datetime, date
 from uvicorn import run
-import pytz
 import logging
+from pydantic import BaseModel
 logging.basicConfig(level=logging.WARNING, filename='main.log', 
                     format='%(levelname)s (%(asctime)s): %(message)s (Line: %(lineno)d)', 
                     datefmt='%d/%m/%Y %H:%M:%S',
                     encoding = 'utf-8', filemode='w')
 ua = UserAgent()
 app = FastAPI()
+
+from typing import List
+
+from fastapi.responses import JSONResponse
+class RequestData(BaseModel):
+    id: List[int]
 
 def add_1_day(date_string):
     # Разделение строки на год, месяц и день
@@ -34,7 +39,7 @@ def add_1_day(date_string):
     return new_date_string
    
 
-def select_news(start_of_week_formatted = None,end_of_week_formatted = None, id_list = None, mod = 0):
+def select_news(start_of_week_formatted = None, end_of_week_formatted = None, id_list = None, mod = 0):
     conn = sqlite3.connect('DB_ekonom_calndar.db')
     cursor = conn.cursor()
     if mod == 0:
@@ -62,16 +67,19 @@ def select_news(start_of_week_formatted = None,end_of_week_formatted = None, id_
 
 # Произвольный периуд           YYYY-MM-DD
 @app.get('/econom_calendar/api/{start_day}/{finish_day}')
-def get_data_arbitrary_time(start_day:str,finish_day:str):
+def get_data_arbitrary_time(start_day:str,finish_day:str) -> list:
     finish_day = add_1_day(finish_day)
-    return (select_news(start_day,finish_day))
+    data = select_news(start_day,finish_day)
+    return JSONResponse(data)
 
-# Ищет по id 
-@app.get('/econom_calendar/find_by_id/api/{id_list}')
-def get_data_find_by_id(id_list:str):
-    id_list = json.loads(id_list)
-    results = select_news(id_list=id_list, mod=1)
-    return (results)
+
+@app.post("/econom_calendar/find_by_id/api")
+async def find_by_id(request_data: RequestData):
+    id = request_data.id
+    results = select_news(id_list=id, mod=1)
+    return JSONResponse(results)
+
+
 
 
 if __name__ == "__main__":

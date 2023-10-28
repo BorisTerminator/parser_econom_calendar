@@ -30,8 +30,9 @@ def job():
     send_message("Начинаем парсить контент и исторические данные!")
     for i in range(0, len(link_and_id), 30):
         elements = link_and_id[i:i+30]
-        # print(i,i+30)
+        print(i,i+30)
         cont_hist_data.start_pars_hist_and_content(elements)
+        
 
 if __name__ == "__main__":
     while True:
